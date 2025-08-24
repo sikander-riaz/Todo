@@ -1,0 +1,163 @@
+name: Vite Todo CI/CD
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # CI Job
+  ci:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Lint code
+        run: npm run lint
+
+      - name: 🧪 Run tests
+        run: npm run test
+
+      - name: ⚡ Build with Vite
+        run: npm run build
+        env:
+          VITE_APP_VERSION: ${{ github.run_number }}
+          VITE_COMMIT_SHA: ${{ github.sha }}
+
+      - name: 📦 Create deployment package
+        run: |
+          # Create production server
+          cat > dist/server.js << 'EOF'
+          import express from 'express';
+          import { fileURLToPath } from 'url';
+          import { dirname, join } from 'path';
+
+          const __filename = fileURLToPath(import.meta.url);
+          const __dirname = dirname(__filename);
+
+          const app = express();
+          const PORT = process.env.PORT || 3000;
+
+          // Serve static files from dist
+          app.use(express.static(__dirname));
+
+          // Health check
+          app.get('/api/health', (req, res) => {
+            res.json({
+              status: 'OK',
+              timestamp: new Date().toISOString(),
+              version: process.env.VITE_APP_VERSION || '1.0.0',
+              commit: process.env.VITE_COMMIT_SHA || 'unknown'
+            });
+          });
+
+          // SPA fallback
+          app.get('*', (req, res) => {
+            res.sendFile(join(__dirname, 'index.html'));
+          });
+
+          app.listen(PORT, () => {
+            console.log(`⚡ Vite Todo App running on http://localhost:${PORT}`);
+            console.log(`💚 Health: http://localhost:${PORT}/api/health`);
+          });
+          EOF
+
+          # Create package.json
+          cat > dist/package.json << 'EOF'
+          {
+            "name": "vite-todo-server",
+            "type": "module",
+            "scripts": { "start": "node server.js" },
+            "dependencies": { "express": "^4.18.2" }
+          }
+          EOF
+
+          # Create deployment archive
+          tar -czf vite-todo.tar.gz -C dist .
+
+      - name: 📤 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vite-todo-${{ github.sha }}
+          path: vite-todo.tar.gz
+
+  # CD Job
+  cd:
+    name: Deploy to EC2
+    needs: ci
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - name: 📥 Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vite-todo-${{ github.sha }}
+
+      - name: 🚀 Deploy application
+        run: |
+          DEPLOY_DIR="/home/$USER/vite-todo"
+
+          echo "🏗️ Setting up deployment directory..."
+          mkdir -p $DEPLOY_DIR
+          cd $DEPLOY_DIR
+
+          echo "📦 Extracting application..."
+          tar -xzf $GITHUB_WORKSPACE/vite-todo.tar.gz
+
+          echo "📦 Installing dependencies..."
+          npm install --production
+
+          echo "🛑 Stopping existing application..."
+          pkill -f "node.*server.js" || true
+          sleep 3
+
+          echo "🚀 Starting new application..."
+          nohup npm start > app.log 2>&1 &
+
+          echo "⏳ Waiting for application to start..."
+          sleep 5
+
+          echo "🏥 Running health checks..."
+          max_attempts=12
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            if curl -f http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo "✅ Application is healthy!"
+              echo ""
+              echo "🎉 DEPLOYMENT SUCCESS!"
+              echo "🌐 App URL: http://$(curl -s ifconfig.me):3000"
+              echo "💚 Health Check: http://$(curl -s ifconfig.me):3000/api/health"
+              echo ""
+              echo "📊 Health Response:"
+              curl -s http://localhost:3000/api/health | jq . 2>/dev/null || curl -s http://localhost:3000/api/health
+              echo ""
+              exit 0
+            else
+              echo "⏳ Attempt $attempt/$max_attempts: App not ready yet..."
+              sleep 3
+              attempt=$((attempt + 1))
+            fi
+          done
+
+          echo "❌ DEPLOYMENT FAILED!"
+          echo "📋 Application logs:"
+          tail -n 30 app.log
+          echo ""
+          echo "🔍 Process check:"
+          ps aux | grep node || echo "No node processes found"
+          exit 1
