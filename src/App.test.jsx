@@ -3,8 +3,6 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import App from "./App";
 
 describe("App", () => {
-  let container;
-
   beforeEach(() => {
     // Clean up any existing DOM elements before each test
     cleanup();
@@ -16,21 +14,18 @@ describe("App", () => {
   });
 
   it("renders todo app title", () => {
-    const { container: testContainer } = render(<App />);
-    container = testContainer;
+    render(<App />);
     expect(screen.getByText(/Vite Todo App/i)).toBeInTheDocument();
   });
 
   it("renders initial todos", () => {
-    const { container: testContainer } = render(<App />);
-    container = testContainer;
+    render(<App />);
     expect(screen.getAllByText(/Setup Vite \+ React/i)[0]).toBeInTheDocument();
     expect(screen.getByText(/Create CI\/CD Pipeline/i)).toBeInTheDocument();
   });
 
   it("can add new todo", () => {
-    const { container: testContainer } = render(<App />);
-    container = testContainer;
+    render(<App />);
     const input = screen.getAllByPlaceholderText(/Add a new todo/i)[0];
     const button = screen.getAllByText(/Add Todo/i)[0];
 
@@ -41,8 +36,7 @@ describe("App", () => {
   });
 
   it("can toggle todo completion", () => {
-    const { container: testContainer } = render(<App />);
-    container = testContainer;
+    render(<App />);
     const incompleteToggle = screen.getAllByLabelText(
       /Mark Deploy to Production as complete/i
     )[0];
@@ -52,8 +46,7 @@ describe("App", () => {
   });
 
   it("can delete todo", () => {
-    const { container: testContainer } = render(<App />);
-    container = testContainer;
+    render(<App />);
     const deleteButton = screen.getAllByLabelText(/Delete Deploy to Production/i)[0];
 
     fireEvent.click(deleteButton);
@@ -61,8 +54,7 @@ describe("App", () => {
   });
 
   it("shows empty state when no todos", () => {
-    const { container: testContainer } = render(<App />);
-    container = testContainer;
+    render(<App />);
 
     // Delete all todos
     const deleteButtons = screen.getAllByText("🗑️");
