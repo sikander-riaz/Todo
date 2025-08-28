@@ -1,6 +1,5 @@
 pipeline {
     agent any
-
     environment {
         IMAGE_NAME = 'siku9786/todo-app'
     }
@@ -8,7 +7,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/sikander-riaz/Todo.git'
+                checkout scm
             }
         }
 
@@ -28,18 +27,6 @@ pipeline {
                     '''
                 }
             }
-        }
-    }
-
-    post {
-        failure {
-            echo 'Pipeline failed!'
-        }
-        success {
-            echo 'Pipeline completed successfully.'
-        }
-        cleanup {
-            echo 'Cleaning up...'
         }
     }
 }
