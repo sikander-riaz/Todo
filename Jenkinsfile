@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'your-dockerhub-username/todo-app'
+        IMAGE_NAME = 'siku9786/todo-app'
     }
 
     stages {
@@ -33,9 +33,22 @@ pipeline {
                     sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                         docker push $IMAGE_NAME:latest
+                        docker logout
                     '''
                 }
             }
+        }
+    }
+
+    post {
+        failure {
+            echo 'Pipeline failed!'
+        }
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+        cleanup {
+            echo 'Cleaning up...'
         }
     }
 }
