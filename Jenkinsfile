@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds') // Jenkins credential ID for DockerHub
         IMAGE_NAME = 'your-dockerhub-username/todo-app'
     }
 
@@ -13,11 +12,18 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Install Docker CLI') {
             steps {
                 sh '''
-                    docker build -t $IMAGE_NAME:latest .
+                    apt-get update
+                    apt-get install -y docker.io
                 '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $IMAGE_NAME:latest .'
             }
         }
 
@@ -30,12 +36,6 @@ pipeline {
                     '''
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            echo 'Pipeline finished.'
         }
     }
 }
