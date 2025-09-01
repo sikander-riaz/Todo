@@ -10,7 +10,7 @@ jobs:
   # CI Job
   ci:
     name: Build & Test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout
