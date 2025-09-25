@@ -2,7 +2,7 @@ pipeline {
     agent { label 'agent' }
 
     tools {
-        jdk 'jdk17'
+        // jdk 'jdk17'
         nodejs 'node20'
     }
 
