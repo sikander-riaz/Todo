@@ -1,10 +1,10 @@
 pipeline {
     agent { label 'agent' }
 
-    // tools {
-    //     jdk 'jdk17'
-    //     nodejs 'node20'
-    // }
+    tools {
+        // jdk 'jdk17'
+        nodejs 'nodejs20'
+    }
 
     environment {
         IMAGE_NAME = 'siku9786/todo-app'   // Replace with your actual image name
