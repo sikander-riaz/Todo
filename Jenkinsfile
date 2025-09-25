@@ -26,21 +26,24 @@ pipeline {
 
         stage('Run Tests & Generate Coverage') {
             steps {
-                sh 'npm test -- --coverage'  // Adjust this if your test script differs
+                sh 'npm test -- --coverage'
             }
         }
 
         stage('SonarQube Scan') {
             steps {
                 withSonarQubeEnv('sonarqube') {
-                    withEnv(["PATH+SONAR=${tool 'sonarqube'}/bin"]) {
-                        sh '''
-                            sonar-scanner \
-                              -Dsonar.projectKey=todo-app \
-                              -Dsonar.projectName=todo-app \
-                              -Dsonar.sources=. \
-                              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-                        '''
+                    withCredentials([string(credentialsId: 'gene-token', variable: 'SONAR_TOKEN')]) {
+                        withEnv(["PATH+SONAR=${tool 'sonarqube'}/bin"]) {
+                            sh '''
+                                sonar-scanner \
+                                  -Dsonar.projectKey=todo-app \
+                                  -Dsonar.projectName=todo-app \
+                                  -Dsonar.sources=. \
+                                  -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                                  -Dsonar.login=${SONAR_TOKEN}
+                            '''
+                        }
                     }
                 }
             }
