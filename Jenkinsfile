@@ -1,18 +1,17 @@
-
 pipeline {
     agent any
 
     tools {
-        // jdk 'jdk17'   // uncomment if you configure a JDK in Jenkins
-        nodejs 'nodejs20'
+        nodejs 'nodejs20'  // Ensure this matches Jenkins tool name
     }
 
     environment {
-        IMAGE_NAME = 'siku9786/todo-app'   // Replace with your actual image name
-        IMAGE_TAG = 'latest'               // Or dynamically set this later
+        IMAGE_NAME = 'siku9786/todo-app'   // Docker image name
+        IMAGE_TAG = 'latest'               // Can change to BUILD_NUMBER if desired
     }
 
     stages {
+
         stage('Checkout Code') {
             steps {
                 git branch: 'main', url: 'https://github.com/sikander-riaz/Todo'
@@ -21,23 +20,28 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh "npm install || true"
+                sh 'npm install'
+            }
+        }
+
+        stage('Run Tests & Generate Coverage') {
+            steps {
+                sh 'npm test -- --coverage'  // Adjust this if your test script differs
             }
         }
 
         stage('SonarQube Scan') {
-            environment {
-                scannerHome = tool 'sonar-scanner'
-            }
             steps {
                 withSonarQubeEnv('sonarqube') {
-                    sh """
-                        ${scannerHome}/bin/sonar-scanner \\
-                        -Dsonar.projectKey=todo-app \\
-                        -Dsonar.projectName=todo-app \\
-                        -Dsonar.sources=. \\
-                        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-                    """
+                    withEnv(["PATH+SONAR=${tool 'sonarqube'}/bin"]) {
+                        sh '''
+                            sonar-scanner \
+                              -Dsonar.projectKey=todo-app \
+                              -Dsonar.projectName=todo-app \
+                              -Dsonar.sources=. \
+                              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                        '''
+                    }
                 }
             }
         }
