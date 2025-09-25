@@ -1,8 +1,9 @@
+
 pipeline {
-    agent { label 'agent' }
+    agent any
 
     tools {
-        // jdk 'jdk17'
+        // jdk 'jdk17'   // uncomment if you configure a JDK in Jenkins
         nodejs 'nodejs20'
     }
 
